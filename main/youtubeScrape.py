@@ -1,4 +1,4 @@
-from _pytest.fixtures import scopes
+
 from bs4 import BeautifulSoup as bs
 import requests
 import pandas as pd
@@ -16,20 +16,23 @@ import googleapiclient.errors
 
 api_service_name = "youtube"
 api_version = "v3"
-client_secrets_file = "YOUR_CLIENT_SECRET_FILE.json"
+client_secrets_file = "C:/Users/matia/youtubeScrape/resources/CS.json"
+scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
+youTubeApiKey = 'AIzaSyBBJGRRF9QAj6AIjhRwL7ytof54lYk91oI'
+youtube = build('youtube', 'v3', developerKey=youTubeApiKey)
 
 # Get credentials and create an API client
+"""
 flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
     client_secrets_file, scopes)
 credentials = flow.run_console()
 youtube = googleapiclient.discovery.build(
     api_service_name, api_version, credentials=credentials)
+"""
 
-youTubeApiKey = 'AIzaSyBBJGRRF9QAj6AIjhRwL7ytof54lYk91oI'
-youtube = build('youtube', 'v3', developerKey=youTubeApiKey)
 channelId = 'UC-lHJZR3Gqxm24_Vd_AJ5Yw'
 
-statdata = youtube.channels().list(part='statistics', id=channelId).execute()
+statdata = youtube.channels().list(part='snippet,statistics', id=channelId).execute()
 stats = statdata['items'][0]['statistics']
 print(stats)
 print(statdata)
@@ -41,9 +44,9 @@ request = youtube.videos().list(
 response = request.execute()
 
 print(response)
-
+"""
 request = youtube.captions().list(
-    videoId="6yQ70Oid5zk",
+    videoId="3tR6mKcBbT4",
     part="snippet"
 )
 response = request.execute()
@@ -62,7 +65,7 @@ download = MediaIoBaseDownload(fh, request)
 complete = False
 while not complete:
     status, complete = download.next_chunk()
-
+"""
 # function to download subtitles
 
 
