@@ -1,71 +1,43 @@
-
-from bs4 import BeautifulSoup as bs
 import requests
-import pandas as pd
-import json
-import io
-import os
+from bs4 import BeautifulSoup as soup
 import youtube_dl
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-from pathlib import Path
+from selenium import webdriver
 
-import google_auth_oauthlib.flow
+#Setup
+driver = webdriver.Chrome()
+driver.get('https://www.youtube.com/watch?v=tl3OOFpixqs')
+driver.maximize_window()
+driver.execute_script("window.scrollTo(0, 1000);")
+driver.implicitly_wait(10)
 
-import googleapiclient.errors
+#Scrape Title
+headlines = driver.find_elements_by_xpath('//*[@id="container"]/h1/yt-formatted-string')
+for headline in headlines:
+    print(headline.text)
 
-api_service_name = "youtube"
-api_version = "v3"
-client_secrets_file = "C:/Users/matia/youtubeScrape/resources/CS.json"
-scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
-youTubeApiKey = 'AIzaSyBBJGRRF9QAj6AIjhRwL7ytof54lYk91oI'
-youtube = build('youtube', 'v3', developerKey=youTubeApiKey)
+#Scrape views
+views = driver.find_element_by_xpath('//*[@id="count"]/yt-view-count-renderer/span[1]')
+print(views.text)
 
-# Get credentials and create an API client
-"""
-flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-    client_secrets_file, scopes)
-credentials = flow.run_console()
-youtube = googleapiclient.discovery.build(
-    api_service_name, api_version, credentials=credentials)
-"""
+#Scrape likes and dislikes
+likes = driver.find_elements_by_xpath('//*[@id="text"]')
+print(likes[4].text, likes[5].text)
 
-channelId = 'UC-lHJZR3Gqxm24_Vd_AJ5Yw'
+#Scrape date
+date = driver.find_element_by_xpath('//*[@id="date"]/yt-formatted-string')
+print(date.text)
 
-statdata = youtube.channels().list(part='snippet,statistics', id=channelId).execute()
-stats = statdata['items'][0]['statistics']
-print(stats)
-print(statdata)
+#Scrape number of comments
+driver.implicitly_wait(10)
+comments = driver.find_element_by_xpath('//*[@id="count"]/yt-formatted-string')
+print(comments.text)
 
-request = youtube.videos().list(
-        part="snippet,contentDetails,statistics",
-        id="6yQ70Oid5zk"
-    )
-response = request.execute()
+#Scrape channel id
+channel = driver.find_element_by_xpath('//*[@id="text"]/a')
+print(channel.text)
+print(channel.get_attribute("href"))
 
-print(response)
-"""
-request = youtube.captions().list(
-    videoId="3tR6mKcBbT4",
-    part="snippet"
-)
-response = request.execute()
-
-print(response)
-
-data_folder = Path("C:/Users/matia/youtubeScrape/Captions/caption")
-
-id_n = "0qmufbVWtd001vLFPe7W8RYx2cISYA-5oRclPFVq7VA="
-request = youtube.captions().download(
-        id=id_n
-    )
-fh = io.FileIO(data_folder, "wb")
-
-download = MediaIoBaseDownload(fh, request)
-complete = False
-while not complete:
-    status, complete = download.next_chunk()
-"""
+driver.close()
 # function to download subtitles
 
 
