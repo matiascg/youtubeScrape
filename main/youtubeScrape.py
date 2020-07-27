@@ -61,7 +61,6 @@ def video_scrape(url):
 
     # Scrape and write into file
     out, _ = yta.get_transcripts([url[32:]])
-    text_out = {}
     text_out = ' '.join([x.get('text', '') for x in out[url[32:]]])
     f.write(text_out)
     f.close()
@@ -70,48 +69,77 @@ def video_scrape(url):
     return data
 
 
-
 def channel_list_creator():
     driver = webdriver.Chrome()
     driver.get('https://socialblade.com/youtube/top/5000/mostsubscribed')
     data = {'Channel name': [], 'Channel ID': []}
     driver.implicitly_wait(10)
     links = []
+
     for i in range(5, 10):
         channels = driver.find_element_by_xpath('/html/body/div[11]/div[2]/div[' + str(i) + ']/div[3]/a')
         links.append(channels.get_attribute('href'))
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        print(i)
 
     for link in links:
         driver.get(link)
         name = driver.find_element_by_xpath('//*[@id="YouTubeUserTopInfoBlockTop"]/div[1]/h1')
         data['Channel name'].append(name.text)
         i = 1
-        channel_link = 'a'
         while True:
-            youtube_channel = driver.find_element_by_xpath('//*[@id="YouTubeUserTopSocial"]/div[' + str(i) + ']/a')
-
             channel_link = str(driver.find_element_by_xpath('//*[@id="YouTubeUserTopSocial"]/div[' + str(i) + ']/a').get_attribute(
                 'href'))
             i += 1
             if channel_link.startswith('https://youtube.com/channel/'):
                 break
         data['Channel ID'].append(channel_link.split("channel/", 1)[1])
-    print(data)
+
+    driver.close()
+
+    return data
 
 
-def channel_scraper(url):
+def channel_scraper(channel_id):
+    url = 'https://youtube.com/channel/' + channel_id + '/videos'
+    driver = webdriver.Chrome()
+    driver.get(url)
+    driver.maximize_window()
+    driver.implicitly_wait(10)
+    name = driver.find_elements_by_xpath('//*[@id="text"]')[3]
+    channel_info = {'Channel ID': [channel_id], 'Channel name': [name.text]}
+    video_info = {'Video ID': [], 'Title': []}
+    abos_number = 0
+    abos = str(driver.find_element_by_xpath('//*[@id="subscriber-count"]').text)
+    if 'Mio' in abos:
+        abos = abos.partition('Mio')[0]
+        if ',' in abos:
+            abos = abos.replace(',', '.')
+        abos_number = int(abos) * 1000000
+    else:
+        abos = abos.partition('Abon')[0]
+        abos_number = int(abos)
+
+    channel_info['Subscribers'] = [abos_number]
+    videos = driver.find_elements_by_xpath('//*[@id="video-title"]')
+
+    for video in videos:
+        video_info['Title'].append(video.text)
+        video_info['Video ID'].append(str(video.get_attribute('href')).split('watch?v=', 1)[1])
+    channel_info['Videos'] = [video_info]
+
+    data = pd.DataFrame.from_dict(channel_info)
+    return data
 
 
-    def download_subs(url, lang="en"):
-        opts = {
-            "skip_download": True,
-            "writesubtitles": "%(name)s.vtt",
-            "subtitlelangs": lang,
-            "writeautomaticsub": True
-        }
-        with youtube_dl.YoutubeDL(opts) as yt:
-            yt.download([url])
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', -1)
 
-channel_list_creator()
+lst = channel_list_creator()
+tab = pd.DataFrame()
+for channel in lst:
+    tab = tab.append(channel_scraper(channel['Channel ID']), ignore_index=True)
+
+
+
