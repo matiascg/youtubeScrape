@@ -5,12 +5,10 @@ import datetime as dt
 from youtube_transcript_api import YouTubeTranscriptApi as yta
 
 
-def video_scrape(url):
+def video_scrape(url, driver):
 
     # Setup
-    driver = webdriver.Chrome()
     driver.get(url)
-    driver.maximize_window()
     driver.execute_script("window.scrollTo(0, 500);")
     driver.implicitly_wait(10)
     data = {}
@@ -65,12 +63,10 @@ def video_scrape(url):
     f.write(text_out)
     f.close()
 
-    driver.close()
     return data
 
 
-def channel_list_creator():
-    driver = webdriver.Chrome()
+def channel_list_creator(driver):
     driver.get('https://socialblade.com/youtube/top/5000/mostsubscribed')
     data = {'Channel name': [], 'Channel ID': []}
     driver.implicitly_wait(10)
@@ -78,7 +74,8 @@ def channel_list_creator():
 
     for i in range(5, 10):
         channels = driver.find_element_by_xpath('/html/body/div[11]/div[2]/div[' + str(i) + ']/div[3]/a')
-        links.append(channels.get_attribute('href'))
+        if not str(driver.find_element_by_xpath('/html/body/div[11]/div[2]/div[' + str(i) + ']/div[4]/span').text) == '--':
+            links.append(channels.get_attribute('href'))
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     for link in links:
@@ -94,22 +91,25 @@ def channel_list_creator():
                 break
         data['Channel ID'].append(channel_link.split("channel/", 1)[1])
 
-    driver.close()
-
     return data
 
 
-def channel_scraper(channel_id):
+def channel_scraper(channel_id, driver):
+
+    # Set up
     url = 'https://youtube.com/channel/' + channel_id + '/videos'
-    driver = webdriver.Chrome()
+    video_info = {'Video ID': [], 'Title': []}
     driver.get(url)
-    driver.maximize_window()
     driver.implicitly_wait(10)
+
+    # Adding Name and ID
     name = driver.find_elements_by_xpath('//*[@id="text"]')[3]
     channel_info = {'Channel ID': [channel_id], 'Channel name': [name.text]}
-    video_info = {'Video ID': [], 'Title': []}
-    abos_number = 0
+
+    # Adding Subscribers
     abos = str(driver.find_element_by_xpath('//*[@id="subscriber-count"]').text)
+
+    # Translating to int
     if 'Mio' in abos:
         abos = abos.partition('Mio')[0]
         if ',' in abos:
@@ -118,16 +118,18 @@ def channel_scraper(channel_id):
     else:
         abos = abos.partition('Abon')[0]
         abos_number = int(abos)
-
     channel_info['Subscribers'] = [abos_number]
-    videos = driver.find_elements_by_xpath('//*[@id="video-title"]')
 
+    # Adding Video ID and Title
+    videos = driver.find_elements_by_xpath('//*[@id="video-title"]')
     for video in videos:
         video_info['Title'].append(video.text)
         video_info['Video ID'].append(str(video.get_attribute('href')).split('watch?v=', 1)[1])
     channel_info['Videos'] = [video_info]
 
-    data = pd.DataFrame.from_dict(channel_info)
+    # Creating a DataFrame
+    data = pd.DataFrame(channel_info)
+
     return data
 
 
@@ -136,10 +138,17 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', -1)
 
-lst = channel_list_creator()
-tab = pd.DataFrame()
-for channel in lst:
-    tab = tab.append(channel_scraper(channel['Channel ID']), ignore_index=True)
+
+def multi_scrape(lst, driver):
+    tab = pd.DataFrame(columns=['Channel ID', 'Channel name', 'Subscribers', 'Videos'])
+    for channel in lst['Channel ID']:
+        tab = tab.append(channel_scraper(channel, driver), ignore_index=True)
+    print(tab)
+
+#tab = pd.DataFrame(channel_scraper('UCq-Fj5jknLsUf-MWSy4_brA'))
+#tab = tab.append(channel_scraper('UCtmqhpXgTzLJBVo5_LMAHHw'), ignore_index=True)
+#print(tab)
+
 
 
 
