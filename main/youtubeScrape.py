@@ -66,16 +66,42 @@ def video_scrape(url):
     f.write(text_out)
     f.close()
 
-
     driver.close()
     return data
 
 
-video_scrape("https://www.youtube.com/watch?v=Jmr0uCTKi9o&t=7s")
+
+def channel_list_creator():
+    driver = webdriver.Chrome()
+    driver.get('https://socialblade.com/youtube/top/5000/mostsubscribed')
+    data = {'Channel name': [], 'Channel ID': []}
+    driver.implicitly_wait(10)
+    links = []
+    for i in range(5, 10):
+        channels = driver.find_element_by_xpath('/html/body/div[11]/div[2]/div[' + str(i) + ']/div[3]/a')
+        links.append(channels.get_attribute('href'))
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        print(i)
+
+    for link in links:
+        driver.get(link)
+        name = driver.find_element_by_xpath('//*[@id="YouTubeUserTopInfoBlockTop"]/div[1]/h1')
+        data['Channel name'].append(name.text)
+        i = 1
+        channel_link = 'a'
+        while True:
+            youtube_channel = driver.find_element_by_xpath('//*[@id="YouTubeUserTopSocial"]/div[' + str(i) + ']/a')
+
+            channel_link = str(driver.find_element_by_xpath('//*[@id="YouTubeUserTopSocial"]/div[' + str(i) + ']/a').get_attribute(
+                'href'))
+            i += 1
+            if channel_link.startswith('https://youtube.com/channel/'):
+                break
+        data['Channel ID'].append(channel_link.split("channel/", 1)[1])
+    print(data)
+
 
 def channel_scraper(url):
-
-
 
 
     def download_subs(url, lang="en"):
@@ -87,3 +113,5 @@ def channel_scraper(url):
         }
         with youtube_dl.YoutubeDL(opts) as yt:
             yt.download([url])
+
+channel_list_creator()
