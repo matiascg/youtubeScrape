@@ -3,7 +3,8 @@ from selenium import webdriver
 import pandas as pd
 import datetime as dt
 from youtube_transcript_api import YouTubeTranscriptApi as yta
-import mysql.connector
+import pymysql
+from sqlalchemy import create_engine
 
 def video_scrape(url, driver):
     # Setup
@@ -71,7 +72,7 @@ def channel_list_creator(driver):
     driver.implicitly_wait(20)
     links = []
 
-    for i in range(5, 20):
+    for i in range(5, 10):
         channels = driver.find_element_by_xpath('/html/body/div[12]/div[2]/div[' + str(i) + ']/div[3]/a')
         if not str(driver.find_element_by_xpath(
                 '/html/body/div[12]/div[2]/div[' + str(i) + ']/div[4]/span').text) == '--' and \
@@ -128,8 +129,8 @@ def channel_scraper(channel, driver):
     videos = driver.find_elements_by_xpath('//*[@id="video-title"]')
     for video in videos:
         video_info['Title'].append(video.text)
-        video_info['Video ID'].append(str(video.get_attribute('href')).split('watch?v=', 1)[1])
-    channel_info['Videos'] = [video_info]
+        video_info['Videos'].append(str(video.get_attribute('href')).split('watch?v=', 1)[1])
+
 
     # Getting total views
     driver.get('https://youtube.com/channel/' + channel['Channel ID'] + '/about')
@@ -141,9 +142,9 @@ def channel_scraper(channel, driver):
     channel_info['Views'] = views_numb
 
     # Creating a DataFrame
-    data = pd.DataFrame(channel_info)
-
-    return data
+    chan = pd.DataFrame(channel_info)
+    vid = pd.DataFrame(video_info)
+    return chan, vid
 
 
 pd.set_option('display.max_rows', None)
@@ -153,21 +154,33 @@ pd.set_option('display.max_colwidth', -1)
 
 
 def multi_scrape(lst, driver):
-    tab = pd.DataFrame(columns=['Channel ID', 'Channel name', 'Subscribers', 'Views', 'Videos'])
+    tab = pd.DataFrame(columns=['Channel ID', 'Channel name', 'Subscribers', 'Views'])
 
     key = 'Channel name'
     for i in range(len(lst[key])):
         val1, val2 = lst[key][i], lst['Channel ID'][i]
         channel = {key: val1, 'Channel ID': val2}
-        tab = tab.append(channel_scraper(channel, driver), ignore_index=True)
-    print(tab)
+        tabchan, tabvid = channel_scraper(channel, driver)
+        tab = tab.append(, ignore_index=True)
+    return tab
 
-
-# tab = pd.DataFrame(channel_scraper('UCq-Fj5jknLsUf-MWSy4_brA'))
-# tab = tab.append(channel_scraper('UCtmqhpXgTzLJBVo5_LMAHHw'), ignore_index=True)
-# print(tab)
 
 driver = webdriver.Chrome()
-driver.maximize_window()
-multi_scrape(channel_list_creator(driver), driver)
+password = 'Blutwurst1'
+tablechan, tablevid = multi_scrape(channel_list_creator(driver), driver)
 driver.close()
+
+conn = pymysql.connect(
+  host="localhost",
+  user="root",
+  password=password,
+  database="youtube")
+
+cursor = conn.cursor()
+engine = create_engine("mysql+pymysql://{user}:{pw}@localhost/{db}"
+                       .format(user="root",
+                               pw=password,
+                               db="youtube"))
+
+table.to_sql("youtubers", engine, if_exists='replace')
+print(pd.read_sql_query('select * from youtubers;', conn))
