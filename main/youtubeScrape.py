@@ -153,7 +153,7 @@ def channel_vid_scrape(channel, driver):
     lst = []
     videos = driver.find_elements_by_xpath('//*[@id="video-title"]')
     for video in videos:
-        lst = lst.append((str(video.get_attribute('href')).split('watch?v=', 1)[1]))
+        lst.append((str(video.get_attribute('href')).split('watch?v=', 1)[1]))
     for id in lst:
         vid_data = vid_data.append(video_scrape(id, driver))
 
